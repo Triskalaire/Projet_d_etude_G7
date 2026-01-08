@@ -1,3 +1,5 @@
 venv/
 .env
 .gitignore
+airflow/logs/
+.idea/
