@@ -7,7 +7,7 @@ load_dotenv()
 
 # Get MongoDB connection string and database name
 MONGO_URL = os.getenv("MONGO_URL")
-DB_NAME = os.getenv("DATABASE_NAME")
+DB_NAME = os.getenv("DATABASE_NAME", "bluesky")
 
 # Connect to MongoDB
 client = MongoClient(MONGO_URL)
