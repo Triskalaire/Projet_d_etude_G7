@@ -34,26 +34,22 @@ def insert_feed_data(feed_data, collection_name):
     except Exception as e: 
         print(f"Erreur inattendue dans '{collection_name}': {e}")
 
+
 def main():
     token = load_token()
     if not token:
+        print("Token not loaded. Check credentials or env variables.")
         return
 
-    print("Récupération Hot...")
-    hot = get_hot_feed(token)
-    insert_feed_data(hot, "hot")
+    feeds = [
+        ("hot", get_hot_feed),
+        ("ukrainian", get_ukrainian_feed),
+        ("science", get_science_feed),
+        ("verified_news", get_verified_news_feed)
+    ]
 
-    print("Récupération Ukrainian War Posts...")
-    ukrainian = get_ukrainian_feed(token)
-    insert_feed_data(ukrainian, "ukrainian")
-
-    print("Récupération Science...")
-    science = get_science_feed(token)
-    insert_feed_data(science, "science")
-
-    print("Récupération Verified News...")
-    verified_news = get_verified_news_feed(token)
-    insert_feed_data(verified_news, "verified_news")
-
-
-main()
+    for name, feed_func in feeds:
+        print(f"Récupération {name}...")
+        posts = feed_func(token, limit=50)  # 50 posts per page
+        print(f"{len(posts)} posts fetched from {name} feed.")
+        insert_feed_data(posts, name)

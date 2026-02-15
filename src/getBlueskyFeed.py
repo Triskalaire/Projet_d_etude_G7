@@ -1,5 +1,6 @@
 import requests
 import os
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,99 +25,90 @@ def load_token():
 
     return r.json().get("accessJwt")
 
-
 def _auth_headers(token):
     return {"Authorization": f"Bearer {token}"}
+
+def fetch_feed_paginated(token, feed_uri, limit_per_page=50, max_pages=10, sleep_sec=0.3):
+    """
+    Fetch posts from a feed using pagination with rate-limit safety.
+    Stops early if no new posts are returned on a page.
+
+    Args:
+        token: Bluesky JWT token
+        feed_uri: feed identifier
+        limit_per_page: number of posts per API call
+        max_pages: maximum number of pages to fetch
+        sleep_sec: seconds to sleep between API calls
+    Returns:
+        List of posts
+    """
+    all_posts = []
+    cursor = None
+
+    for page in range(max_pages):
+        params = {"feed": feed_uri, "limit": limit_per_page}
+        if cursor:
+            params["cursor"] = cursor
+
+        r = requests.get(f"{API_URL}/app.bsky.feed.getFeed",
+                         headers=_auth_headers(token),
+                         params=params)
+
+        if r.status_code == 429:
+            print("Rate limit hit, sleeping 60s...")
+            time.sleep(60)
+            continue
+
+        if r.status_code != 200:
+            print(f"Erreur feed {feed_uri} (page {page+1}):", r.text)
+            break
+
+        data = r.json()
+        feed_items = data.get("feed", [])
+
+        if not feed_items:
+            print(f"No new posts found on page {page+1}, stopping early.")
+            break
+
+        all_posts.extend(feed_items)
+
+        cursor = data.get("cursor")
+        if not cursor:
+            break
+
+        time.sleep(sleep_sec)  # small pause to avoid rate-limit
+
+    return all_posts
 
 # Note : How did I get those feed ? With f"{API_URL}/app.bsky.feed.getSuggestedFeeds" (examples of feed that I might like)
 # And then I chose some with big likes number. Only the "What's Hot" feed is an official one
 # I chose Verified News to get a "golden feed", and the Ukrainan feed to maybe get some false news/less verified news to compare
 
-# -----------------------------
-# 1. HOT FEED (What's Hot)
-# -----------------------------
+# Feed-specific functions
 def get_hot_feed(token, limit=50):
-    """What's Hot feed via feed generator."""
-    params = {
-        "feed": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot",
-        "limit": limit
-    }
-
-    r = requests.get(
-        f"{API_URL}/app.bsky.feed.getFeed",
-        headers=_auth_headers(token),
-        params=params
+    return fetch_feed_paginated(
+        token,
+        "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot",
+        limit_per_page=limit
     )
 
-    if r.status_code != 200:
-        print("Erreur Hot:", r.text)
-        return []
-
-    return r.json().get("feed", [])
-
-# -----------------------------
-# 2. UKRAINIAN NEWS FEED
-# -----------------------------
 def get_ukrainian_feed(token, limit=50):
-    """Posts from Ukrainians about Ukraine and their experience during the war. """
-    params = {
-        "feed": "at://did:plc:dvgliotey33vix3wlltybgkd/app.bsky.feed.generator/ukrainian-view",
-        "limit": limit
-    }
-
-    r = requests.get(
-        f"{API_URL}/app.bsky.feed.getFeed",
-        headers=_auth_headers(token),
-        params=params
+    return fetch_feed_paginated(
+        token,
+        "at://did:plc:dvgliotey33vix3wlltybgkd/app.bsky.feed.generator/ukrainian-view",
+        limit_per_page=limit
     )
 
-    if r.status_code != 200:
-        print("Erreur Ukrainian News:", r.text)
-        return []
-
-    return r.json().get("feed", [])
-
-# -----------------------------
-# 3. SCIENCE FEED
-# -----------------------------
 def get_science_feed(token, limit=50):
-    """Science feed via feed generator."""
-    params = {
-        "feed": "at://did:plc:jfhpnnst6flqway4eaeqzj2a/app.bsky.feed.generator/for-science",
-        "limit": limit
-    }
-
-    r = requests.get(
-        f"{API_URL}/app.bsky.feed.getFeed",
-        headers=_auth_headers(token),
-        params=params
+    return fetch_feed_paginated(
+        token,
+        "at://did:plc:jfhpnnst6flqway4eaeqzj2a/app.bsky.feed.generator/for-science",
+        limit_per_page=limit
     )
 
-    if r.status_code != 200:
-        print("Erreur Science:", r.text)
-        return []
-
-    return r.json().get("feed", [])
-
-# -----------------------------
-# 4. VERIFIED NEWS FEED
-# -----------------------------
 def get_verified_news_feed(token, limit=50):
-    """Verified News feed via feed generator."""
-    params = {
-        "feed": "at://did:plc:kkf4naxqmweop7dv4l2iqqf5/app.bsky.feed.generator/verified-news",
-        "limit": limit
-    }
-
-    r = requests.get(
-        f"{API_URL}/app.bsky.feed.getFeed",
-        headers=_auth_headers(token),
-        params=params
+    return fetch_feed_paginated(
+        token,
+        "at://did:plc:kkf4naxqmweop7dv4l2iqqf5/app.bsky.feed.generator/verified-news",
+        limit_per_page=limit
     )
-
-    if r.status_code != 200:
-        print("Erreur Verified News:", r.text)
-        return []
-
-    return r.json().get("feed", [])
-
