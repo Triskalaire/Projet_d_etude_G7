@@ -1,69 +1,122 @@
-import json
 import requests
-from loginBluesky import login
+import os
+from dotenv import load_dotenv
 
-# Load access token from token.json
+load_dotenv()
+
+BLUESKY_USERNAME = os.getenv("BSKY_IDENTIFIER")
+BLUESKY_PASSWORD = os.getenv("BSKY_PASSWORD")
+
+API_URL = "https://bsky.social/xrpc"
+
 def load_token():
-    try:
-        with open("token.json", "r", encoding="utf-8") as f:
-            tokens = json.load(f)
-            return tokens.get("accessJwt")
-    except FileNotFoundError:
-        print("Erreur : token.json introuvable. Veuillez d'abord exécuter login.py.")
+    """Authentifie l'utilisateur et retourne un token JWT Bluesky."""
+    payload = {
+        "identifier": BLUESKY_USERNAME,
+        "password": BLUESKY_PASSWORD
+    }
+
+    r = requests.post(f"{API_URL}/com.atproto.server.createSession", json=payload)
+
+    if r.status_code != 200:
+        print("Erreur d'authentification Bluesky :", r.text)
         return None
 
-def get_feed(access_token, preferred_languages="fr"):
-    url = "https://bsky.social/xrpc/app.bsky.feed.getFeed"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Accept-Language": preferred_languages
-    }
+    return r.json().get("accessJwt")
+
+
+def _auth_headers(token):
+    return {"Authorization": f"Bearer {token}"}
+
+# Note : How did I get those feed ? With f"{API_URL}/app.bsky.feed.getSuggestedFeeds" (examples of feed that I might like)
+# And then I chose some with big likes number. Only the "What's Hot" feed is an official one
+# I chose Verified News to get a "golden feed", and the Ukrainan feed to maybe get some false news/less verified news to compare
+
+# -----------------------------
+# 1. HOT FEED (What's Hot)
+# -----------------------------
+def get_hot_feed(token, limit=50):
+    """What's Hot feed via feed generator."""
     params = {
         "feed": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot",
-        "limit": 30
+        "limit": limit
     }
 
-    response = requests.get(url, headers=headers, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        feed = data.get("feed", [])
-        next_page = data.get("cursor")
-        print("Feed reçu avec succès.")
-        return feed, next_page
-    else:
-        print("Erreur lors de la récupération du feed :", response.text)
-        return None, None
+    r = requests.get(
+        f"{API_URL}/app.bsky.feed.getFeed",
+        headers=_auth_headers(token),
+        params=params
+    )
 
+    if r.status_code != 200:
+        print("Erreur Hot:", r.text)
+        return []
 
-def get_timeline(access_token, preferred_languages="fr"):
-    url = "https://bsky.social/xrpc/app.bsky.feed.getTimeline"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Accept-Language": preferred_languages
-    }
+    return r.json().get("feed", [])
+
+# -----------------------------
+# 2. UKRAINIAN NEWS FEED
+# -----------------------------
+def get_ukrainian_feed(token, limit=50):
+    """Posts from Ukrainians about Ukraine and their experience during the war. """
     params = {
-        "limit": 30
+        "feed": "at://did:plc:dvgliotey33vix3wlltybgkd/app.bsky.feed.generator/ukrainian-view",
+        "limit": limit
     }
 
-    response = requests.get(url, headers=headers, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        feed = data.get("feed", [])
-        next_page = data.get("cursor")
-        print("Timeline reçue avec succès.")
-        return feed, next_page
-    else:
-        print("Erreur lors de la récupération du timeline :", response.text)
-        return None, None
+    r = requests.get(
+        f"{API_URL}/app.bsky.feed.getFeed",
+        headers=_auth_headers(token),
+        params=params
+    )
 
+    if r.status_code != 200:
+        print("Erreur Ukrainian News:", r.text)
+        return []
 
-if __name__ == "__main__":
-    token = load_token()
-    if token:
-        print("Récupération du feed 'What's Hot'...")
-        feed, feed_cursor = get_feed(token)
-        print("Nombre de posts dans le feed:", len(feed))
+    return r.json().get("feed", [])
 
-        print("\nRécupération du timeline utilisateur...")
-        timeline, timeline_cursor = get_timeline(token)
-        print("Nombre de posts dans la timeline:", len(timeline))
+# -----------------------------
+# 3. SCIENCE FEED
+# -----------------------------
+def get_science_feed(token, limit=50):
+    """Science feed via feed generator."""
+    params = {
+        "feed": "at://did:plc:jfhpnnst6flqway4eaeqzj2a/app.bsky.feed.generator/for-science",
+        "limit": limit
+    }
+
+    r = requests.get(
+        f"{API_URL}/app.bsky.feed.getFeed",
+        headers=_auth_headers(token),
+        params=params
+    )
+
+    if r.status_code != 200:
+        print("Erreur Science:", r.text)
+        return []
+
+    return r.json().get("feed", [])
+
+# -----------------------------
+# 4. VERIFIED NEWS FEED
+# -----------------------------
+def get_verified_news_feed(token, limit=50):
+    """Verified News feed via feed generator."""
+    params = {
+        "feed": "at://did:plc:kkf4naxqmweop7dv4l2iqqf5/app.bsky.feed.generator/verified-news",
+        "limit": limit
+    }
+
+    r = requests.get(
+        f"{API_URL}/app.bsky.feed.getFeed",
+        headers=_auth_headers(token),
+        params=params
+    )
+
+    if r.status_code != 200:
+        print("Erreur Verified News:", r.text)
+        return []
+
+    return r.json().get("feed", [])
+

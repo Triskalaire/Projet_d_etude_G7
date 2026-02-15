@@ -13,8 +13,8 @@ with DAG(
     dag_id='bluesky_to_mongo',
     default_args=default_args,
     description='Récupère les posts Bluesky et les insère dans MongoDB',
-    schedule='@hourly',  # Toutes les heures
-    start_date=datetime(2025, 11, 6),
+    schedule='0 * * * *',  # Toutes les heures
+    start_date=datetime(2026, 1, 1), # Date dans le passé, sinon le DAG ne se lance pas
     catchup=False,
 ) as dag:
 
