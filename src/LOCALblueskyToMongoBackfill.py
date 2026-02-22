@@ -6,8 +6,14 @@ from pymongo.errors import BulkWriteError
 
 from getBlueskySearch import load_token, search_posts_backfill, get_verified_news_feed
 
+sys.stdout = open(r"C:\bluesky_log.txt", "a")
+sys.stderr = sys.stdout
+print("---- Script started ----")
+
+
 # ---------- CONFIG ----------
-load_dotenv()
+load_dotenv("C:\\Users\\lunel\\OneDrive - SUP DE VINCI\\Documents\\Mastère1\\Projet_d_etude_G7\\.env")
+
 
 MONGO_URI = os.getenv("MONGO_URL")
 DB_NAME = os.getenv("DATABASE_NAME")
@@ -18,18 +24,11 @@ SEARCH_QUERIES = {
     "news": "news",
     "climate": "climate OR global warming"
 }
-"""
+
 SEARCH_QUERIES_FR = {  # with some English because French returns very few results anyways...
     "science": "sciences OR recherche OR scientifique OR scientifiques OR étude OR études",
     "ukraine": "Ukraine OR ukrainien OR guerre OR conflit OR invasion OR war",
     "climate": "climat OR réchauffement climatique OR changement climatique or climate",
-    "news": "news" 
-}
-"""
-SEARCH_QUERIES_FR = {  # with some English because French returns very few results anyways...
-    "science": "sciences",
-    "ukraine": "Ukraine",
-    "climate": "réchauffement climatique",
     "news": "news" 
 }
 
